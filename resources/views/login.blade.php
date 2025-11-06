@@ -16,7 +16,8 @@
         
         <!-- Login Form -->
         <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-8">
-            <form action="#" method="POST" class="space-y-6">
+            <form action="{{ route('login.post') }}" method="POST" class="space-y-6">
+                @csrf
                 <!-- Email -->
                 <div>
                     <label for="email" class="block text-sm font-medium mb-2">Email atau Username</label>
@@ -56,28 +57,13 @@
                 <!-- Remember & Forgot -->
                 <div class="flex items-center justify-between">
                     <label class="flex items-center">
-                        <input type="checkbox" class="w-4 h-4 bg-neutral-800 border-neutral-700 rounded">
+                        <input type="checkbox" name="remember" class="w-4 h-4 bg-neutral-800 border-neutral-700 rounded">
                         <span class="ml-2 text-sm text-neutral-400">Ingat saya</span>
                     </label>
                     <a href="#" class="text-sm text-neutral-400 hover:text-white transition-colors">Lupa password?</a>
                 </div>
                 
-                <!-- Role Selection (Demo Purpose) -->
-                <div>
-                    <label class="block text-sm font-medium mb-2">Login Sebagai</label>
-                    <div class="grid grid-cols-3 gap-3">
-                        <button type="button" onclick="loginAs('admin')" class="px-4 py-3 bg-neutral-800 hover:bg-white hover:text-black border border-neutral-700 rounded-lg font-medium transition-all duration-200">
-                            Admin
-                        </button>
-                        <button type="button" onclick="loginAs('kasir')" class="px-4 py-3 bg-neutral-800 hover:bg-white hover:text-black border border-neutral-700 rounded-lg font-medium transition-all duration-200">
-                            Kasir
-                        </button>
-                        <button type="button" onclick="loginAs('member')" class="px-4 py-3 bg-neutral-800 hover:bg-white hover:text-black border border-neutral-700 rounded-lg font-medium transition-all duration-200">
-                            Member
-                        </button>
-                    </div>
-                    <p class="text-xs text-neutral-500 mt-2 text-center">*Demo: Pilih role untuk melihat dashboard yang sesuai</p>
-                </div>
+                <!-- Role selection demo removed in favor of real authentication -->
                 
                 <!-- Submit Button -->
                 <button 
@@ -119,22 +105,9 @@
     </div>
 </div>
 
-<script>
-    function loginAs(role) {
-        // Demo function untuk redirect ke dashboard berdasarkan role
-        const routes = {
-            'admin': "{{ route('admin.dashboard') }}",
-            'kasir': "{{ route('kasir.dashboard') }}",
-            'member': "{{ route('member.dashboard') }}"
-        };
-        
-        // Highlight selected role
-        event.target.classList.add('bg-white', 'text-black');
-        
-        // Redirect to dashboard (In production, this would be handled by Laravel authentication)
-        setTimeout(() => {
-            window.location.href = routes[role];
-        }, 500);
-    }
-</script>
+@if($errors->any())
+<div class="mt-4 bg-red-500/10 border border-red-600 text-red-400 px-4 py-3 rounded-lg w-full max-w-md mx-auto">
+    {{ $errors->first() }}
+</div>
+@endif
 @endsection

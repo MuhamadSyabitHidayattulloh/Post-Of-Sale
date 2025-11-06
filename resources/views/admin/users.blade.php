@@ -6,13 +6,47 @@
 @section('page-subtitle', 'Kelola admin, kasir, dan member')
 
 @section('page-content')
-<div class="space-y-6" x-data="{ 
-    activeTab: 'users', 
-    showModal: false, 
-    modalMode: 'add', 
+<div class="space-y-6" x-data="{
+    activeTab: '{{ $activeTab ?? 'users' }}',
+    showModal: false,
+    modalMode: 'add',
     userType: 'kasir',
     showTierModal: false,
-    editingTier: 'bronze'
+    editingTier: 'bronze',
+    // form state
+    storeUrl: '{{ route('admin.users.store') }}',
+    updateUrlTemplate: '{{ url('/admin/users/__ID__') }}',
+    formAction: '{{ route('admin.users.store') }}',
+    editId: null,
+    formName: '',
+    formEmail: '',
+    formPassword: '',
+    member_tier_id: null,
+    statusChecked: true,
+    openAdd() {
+        this.modalMode = 'add';
+        this.formAction = this.storeUrl;
+        this.editId = null;
+        this.formName = '';
+        this.formEmail = '';
+        this.formPassword = '';
+        this.userType = 'admin';
+        this.member_tier_id = null;
+        this.statusChecked = true;
+        this.showModal = true;
+    },
+    openEdit(u) {
+        this.modalMode = 'edit';
+        this.editId = u.id;
+        this.formAction = this.updateUrlTemplate.replace('__ID__', u.id);
+        this.formName = u.name ?? '';
+        this.formEmail = u.email ?? '';
+        this.formPassword = '';
+        this.userType = u.role ?? 'member';
+        this.member_tier_id = u.member_tier_id ?? null;
+        this.statusChecked = (u.status ?? 'active') === 'active';
+        this.showModal = true;
+    }
 }">
     <!-- Tabs -->
     <div class="flex items-center space-x-4 border-b border-neutral-800">
@@ -30,6 +64,12 @@
     
     <!-- User Management Tab -->
     <div x-show="activeTab === 'users'" class="space-y-6">
+        @if(session('status'))
+            <div class="bg-green-500/10 border border-green-600 text-green-400 px-4 py-3 rounded-lg">{{ session('status') }}</div>
+        @endif
+        @if(session('error'))
+            <div class="bg-red-500/10 border border-red-600 text-red-400 px-4 py-3 rounded-lg">{{ session('error') }}</div>
+        @endif
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
@@ -37,7 +77,7 @@
                     <div class="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
                         <i class="fas fa-user-shield text-purple-500 text-xl"></i>
                     </div>
-                    <span class="text-2xl font-bold">3</span>
+                    <span class="text-2xl font-bold">{{ $adminCount ?? 0 }}</span>
                 </div>
                 <h3 class="font-semibold mb-1">Admin</h3>
                 <p class="text-sm text-neutral-400">Full Access</p>
@@ -48,7 +88,7 @@
                     <div class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
                         <i class="fas fa-cash-register text-blue-500 text-xl"></i>
                     </div>
-                    <span class="text-2xl font-bold">12</span>
+                    <span class="text-2xl font-bold">{{ $kasirCount ?? 0 }}</span>
                 </div>
                 <h3 class="font-semibold mb-1">Kasir</h3>
                 <p class="text-sm text-neutral-400">POS Access</p>
@@ -59,7 +99,7 @@
                     <div class="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
                         <i class="fas fa-users text-green-500 text-xl"></i>
                     </div>
-                    <span class="text-2xl font-bold">75</span>
+                    <span class="text-2xl font-bold">{{ $memberCount ?? 0 }}</span>
                 </div>
                 <h3 class="font-semibold mb-1">Member</h3>
                 <p class="text-sm text-neutral-400">Customer</p>
@@ -69,26 +109,27 @@
         <!-- Filter & Actions -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="flex items-center space-x-4">
-                <button @click="showModal = true; modalMode = 'add'; userType = 'admin'" 
+                <button @click="openAdd()" 
                         class="px-4 py-2.5 bg-white text-black rounded-lg font-semibold hover:bg-neutral-200 transition-all duration-200 flex items-center space-x-2">
                     <i class="fas fa-plus"></i>
                     <span>Tambah User</span>
                 </button>
             </div>
             
-            <div class="flex items-center space-x-4">
+            <form method="GET" action="{{ route('admin.users') }}" class="flex items-center space-x-4">
                 <div class="relative">
                     <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-500"></i>
-                    <input type="text" placeholder="Cari user..." 
+                    <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari user..." 
                            class="bg-neutral-900 border border-neutral-800 rounded-lg pl-12 pr-4 py-2.5 focus:outline-none focus:border-neutral-600 transition-colors w-64">
                 </div>
-                <select class="bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2.5 focus:outline-none focus:border-neutral-600 transition-colors">
-                    <option>Semua Role</option>
-                    <option>Admin</option>
-                    <option>Kasir</option>
-                    <option>Member</option>
+                <select name="role" class="bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2.5 focus:outline-none focus:border-neutral-600 transition-colors">
+                    <option value="">Semua Role</option>
+                    <option value="admin" @selected(request('role')==='admin')>Admin</option>
+                    <option value="kasir" @selected(request('role')==='kasir')>Kasir</option>
+                    <option value="member" @selected(request('role')==='member')>Member</option>
                 </select>
-            </div>
+                <button type="submit" class="px-4 py-2.5 bg-neutral-800 rounded-lg font-medium hover:bg-neutral-700 transition-colors">Filter</button>
+            </form>
         </div>
         
         <!-- Users Table -->
@@ -106,62 +147,70 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-neutral-800">
-                        @php
-                            $users = [
-                                ['name' => 'Admin Utama', 'email' => 'admin@kasir.com', 'role' => 'Admin', 'status' => 'active', 'date' => '2024-01-15'],
-                                ['name' => 'Budi Santoso', 'email' => 'budi@kasir.com', 'role' => 'Kasir', 'status' => 'active', 'date' => '2024-02-20'],
-                                ['name' => 'Siti Nurhaliza', 'email' => 'siti@kasir.com', 'role' => 'Kasir', 'status' => 'active', 'date' => '2024-03-10'],
-                                ['name' => 'Ahmad Rizki', 'email' => 'ahmad@gmail.com', 'role' => 'Member', 'status' => 'active', 'date' => '2024-04-05'],
-                                ['name' => 'Dewi Lestari', 'email' => 'dewi@gmail.com', 'role' => 'Member', 'status' => 'inactive', 'date' => '2024-05-12'],
-                            ];
-                        @endphp
-                        
-                        @foreach($users as $index => $user)
+                        @forelse($users as $user)
                         <tr class="hover:bg-neutral-800/50 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-3">
                                     <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <span class="text-sm font-bold">{{ substr($user['name'], 0, 1) }}</span>
+                                        <span class="text-sm font-bold">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
                                     </div>
                                     <div>
-                                        <p class="font-semibold">{{ $user['name'] }}</p>
-                                        <p class="text-xs text-neutral-400">ID: USR-{{ str_pad($index + 1, 4, '0', STR_PAD_LEFT) }}</p>
+                                        <p class="font-semibold">{{ $user->name }}</p>
+                                        <p class="text-xs text-neutral-400">ID: USR-{{ str_pad((string) $user->id, 4, '0', STR_PAD_LEFT) }}</p>
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-sm">{{ $user['email'] }}</td>
+                            <td class="px-6 py-4 text-sm">{{ $user->email }}</td>
                             <td class="px-6 py-4">
-                                <span class="px-3 py-1 text-xs font-semibold rounded-full 
-                                    {{ $user['role'] === 'Admin' ? 'bg-purple-500/10 text-purple-500' : '' }}
-                                    {{ $user['role'] === 'Kasir' ? 'bg-blue-500/10 text-blue-500' : '' }}
-                                    {{ $user['role'] === 'Member' ? 'bg-green-500/10 text-green-500' : '' }}">
-                                    {{ $user['role'] }}
+                                @php
+                                    $roleColor = [
+                                        'admin' => 'bg-purple-500/10 text-purple-500',
+                                        'kasir' => 'bg-blue-500/10 text-blue-500',
+                                        'member' => 'bg-green-500/10 text-green-500',
+                                    ][$user->role] ?? 'bg-neutral-700 text-neutral-300';
+                                @endphp
+                                <span class="px-3 py-1 text-xs font-semibold rounded-full {{ $roleColor }}">
+                                    {{ ucfirst($user->role) }}
                                 </span>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="px-3 py-1 text-xs font-semibold rounded-full {{ $user['status'] === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500' }}">
-                                    {{ $user['status'] === 'active' ? 'Aktif' : 'Nonaktif' }}
+                                <span class="px-3 py-1 text-xs font-semibold rounded-full {{ $user->status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500' }}">
+                                    {{ $user->status === 'active' ? 'Aktif' : 'Nonaktif' }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-sm text-neutral-400">{{ date('d M Y', strtotime($user['date'])) }}</td>
+                            <td class="px-6 py-4 text-sm text-neutral-400">{{ optional($user->created_at)->format('d M Y') }}</td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center space-x-2">
-                                    <button @click="showModal = true; modalMode = 'edit'" 
+                                    <button type="button"
+                                            data-user="{{ htmlspecialchars(json_encode(['id'=>$user->id,'name'=>$user->name,'email'=>$user->email,'role'=>$user->role,'status'=>$user->status,'member_tier_id'=>$user->member_tier_id]), ENT_QUOTES, 'UTF-8') }}" 
+                                            @click="openEdit(JSON.parse($event.target.closest('button').getAttribute('data-user')))" 
                                             class="p-2 hover:bg-neutral-700 rounded-lg transition-colors" 
                                             title="Edit">
                                         <i class="fas fa-edit text-blue-500"></i>
                                     </button>
-                                    <button class="p-2 hover:bg-neutral-700 rounded-lg transition-colors" 
-                                            title="Hapus">
-                                        <i class="fas fa-trash text-red-500"></i>
-                                    </button>
+                                    <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}" onsubmit="return confirm('Hapus user ini?');" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="p-2 hover:bg-neutral-700 rounded-lg transition-colors" title="Hapus">
+                                            <i class="fas fa-trash text-red-500"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-neutral-400">Tidak ada user ditemukan.</td>
+                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
+            @if(isset($users) && $users instanceof \Illuminate\Contracts\Pagination\Paginator)
+            <div class="px-6 py-4 border-t border-neutral-800">
+                {{ $users->links() }}
+            </div>
+            @endif
         </div>
     </div>
     
@@ -169,156 +218,34 @@
     <div x-show="activeTab === 'tiers'" class="space-y-6">
         <!-- Tier Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Bronze Tier -->
-            <div class="bg-gradient-to-br from-orange-900/20 to-transparent border-2 border-orange-800/50 rounded-xl p-8 hover:border-orange-600/50 transition-all">
+            @foreach(($tiers ?? []) as $tier)
+            <div class="border-2 rounded-xl p-8 transition-all" style="border-color: {{ $tier->color ?? '#525252' }};">
                 <div class="text-center mb-6">
-                    <div class="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-medal text-orange-500 text-4xl"></i>
+                    <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: {{ ($tier->color ?? '#a3a3a3') }}22;">
+                        <i class="fas fa-medal text-4xl" style="color: {{ $tier->color ?? '#a3a3a3' }};"></i>
                     </div>
-                    <h3 class="text-2xl font-bold mb-2">Bronze</h3>
-                    <p class="text-neutral-400">Tier Pemula</p>
+                    <h3 class="text-2xl font-bold mb-2">{{ $tier->name }}</h3>
+                    <p class="text-neutral-400">{{ $tier->description ?? ('Tier ' . $tier->name) }}</p>
                 </div>
-                
                 <div class="space-y-4 mb-6">
                     <div class="flex items-center justify-between pb-3 border-b border-neutral-800">
                         <span class="text-sm text-neutral-400">Member</span>
-                        <span class="font-semibold">32</span>
+                        <span class="font-semibold">{{ $tier->members_count ?? 0 }}</span>
                     </div>
                     <div class="flex items-center justify-between pb-3 border-b border-neutral-800">
                         <span class="text-sm text-neutral-400">Min. Pembelian</span>
-                        <span class="font-semibold">Rp 0</span>
+                        <span class="font-semibold">Rp {{ number_format((int) ($tier->min_total ?? 0), 0, ',', '.') }}</span>
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-neutral-400">Diskon</span>
-                        <span class="font-semibold text-orange-500">5%</span>
+                        <span class="font-semibold" style="color: {{ $tier->color ?? '#a3a3a3' }};">{{ (float) ($tier->discount_percent ?? 0) }}%</span>
                     </div>
                 </div>
-                
-                <div class="space-y-2 mb-6">
-                    <h4 class="font-semibold text-sm mb-3">Benefit:</h4>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Diskon 5% setiap pembelian</span>
-                    </div>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Akumulasi poin</span>
-                    </div>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Info promo eksklusif</span>
-                    </div>
-                </div>
-                
-                <button @click="showTierModal = true; editingTier = 'bronze'" class="w-full px-4 py-3 bg-orange-500/10 border border-orange-500/30 text-orange-500 rounded-lg font-semibold hover:bg-orange-500/20 transition-colors">
+                <button @click="showTierModal = true; editingTier = '{{ strtolower($tier->name) }}'" class="w-full px-4 py-3 border rounded-lg font-semibold transition-colors" style="border-color: {{ $tier->color ?? '#a3a3a3' }}; color: {{ $tier->color ?? '#a3a3a3' }}; background-color: {{ ($tier->color ?? '#a3a3a3') }}1A;">
                     Edit Tier
                 </button>
             </div>
-            
-            <!-- Silver Tier -->
-            <div class="bg-gradient-to-br from-gray-400/20 to-transparent border-2 border-gray-400/50 rounded-xl p-8 hover:border-gray-400/70 transition-all transform scale-105">
-                <div class="text-center mb-6">
-                    <div class="w-20 h-20 bg-gray-400/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-medal text-gray-400 text-4xl"></i>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-2">Silver</h3>
-                    <p class="text-neutral-400">Tier Menengah</p>
-                    <span class="inline-block mt-2 px-3 py-1 bg-yellow-500/10 text-yellow-500 text-xs font-semibold rounded-full">Popular</span>
-                </div>
-                
-                <div class="space-y-4 mb-6">
-                    <div class="flex items-center justify-between pb-3 border-b border-neutral-800">
-                        <span class="text-sm text-neutral-400">Member</span>
-                        <span class="font-semibold">28</span>
-                    </div>
-                    <div class="flex items-center justify-between pb-3 border-b border-neutral-800">
-                        <span class="text-sm text-neutral-400">Min. Pembelian</span>
-                        <span class="font-semibold">Rp 1jt</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-neutral-400">Diskon</span>
-                        <span class="font-semibold text-gray-400">10%</span>
-                    </div>
-                </div>
-                
-                <div class="space-y-2 mb-6">
-                    <h4 class="font-semibold text-sm mb-3">Benefit:</h4>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Diskon 10% setiap pembelian</span>
-                    </div>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Akumulasi poin 2x</span>
-                    </div>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Gratis ongkir 1x/bulan</span>
-                    </div>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Priority support</span>
-                    </div>
-                </div>
-                
-                <button @click="showTierModal = true; editingTier = 'silver'" class="w-full px-4 py-3 bg-gray-400/10 border border-gray-400/30 text-gray-300 rounded-lg font-semibold hover:bg-gray-400/20 transition-colors">
-                    Edit Tier
-                </button>
-            </div>
-            
-            <!-- Gold Tier -->
-            <div class="bg-gradient-to-br from-yellow-500/20 to-transparent border-2 border-yellow-500/50 rounded-xl p-8 hover:border-yellow-500/70 transition-all">
-                <div class="text-center mb-6">
-                    <div class="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-crown text-yellow-500 text-4xl"></i>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-2">Gold</h3>
-                    <p class="text-neutral-400">Tier Premium</p>
-                </div>
-                
-                <div class="space-y-4 mb-6">
-                    <div class="flex items-center justify-between pb-3 border-b border-neutral-800">
-                        <span class="text-sm text-neutral-400">Member</span>
-                        <span class="font-semibold">15</span>
-                    </div>
-                    <div class="flex items-center justify-between pb-3 border-b border-neutral-800">
-                        <span class="text-sm text-neutral-400">Min. Pembelian</span>
-                        <span class="font-semibold">Rp 5jt</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-neutral-400">Diskon</span>
-                        <span class="font-semibold text-yellow-500">15%</span>
-                    </div>
-                </div>
-                
-                <div class="space-y-2 mb-6">
-                    <h4 class="font-semibold text-sm mb-3">Benefit:</h4>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Diskon 15% setiap pembelian</span>
-                    </div>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Akumulasi poin 3x</span>
-                    </div>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Gratis ongkir unlimited</span>
-                    </div>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">VIP support 24/7</span>
-                    </div>
-                    <div class="flex items-start space-x-2">
-                        <i class="fas fa-check text-green-500 mt-1"></i>
-                        <span class="text-sm text-neutral-400">Early access produk baru</span>
-                    </div>
-                </div>
-                
-                <button @click="showTierModal = true; editingTier = 'gold'" class="w-full px-4 py-3 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 rounded-lg font-semibold hover:bg-yellow-500/20 transition-colors">
-                    Edit Tier
-                </button>
-            </div>
+            @endforeach
         </div>
         
         <!-- Tier Settings -->
@@ -387,25 +314,29 @@
                 </button>
             </div>
             
-            <form class="p-6 space-y-4">
+            <form class="p-6 space-y-4" method="POST" :action="formAction">
+                @csrf
+                <template x-if="modalMode === 'edit'">
+                    <input type="hidden" name="_method" value="PUT">
+                </template>
                 <div>
                     <label class="block text-sm font-medium mb-2">Nama Lengkap</label>
-                    <input type="text" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="Masukkan nama lengkap">
+                    <input type="text" name="name" x-model="formName" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="Masukkan nama lengkap" required>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium mb-2">Email</label>
-                    <input type="email" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="email@example.com">
+                    <input type="email" name="email" x-model="formEmail" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="email@example.com" required>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium mb-2">Password</label>
-                    <input type="password" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="••••••••">
+                    <input type="password" name="password" x-model="formPassword" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="••••••••" :required="modalMode === 'add'">
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium mb-2">Role</label>
-                    <select x-model="userType" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500">
+                    <select x-model="userType" name="role" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500">
                         <option value="admin">Admin</option>
                         <option value="kasir">Kasir</option>
                         <option value="member">Member</option>
@@ -414,16 +345,16 @@
                 
                 <div x-show="userType === 'member'">
                     <label class="block text-sm font-medium mb-2">Tier Member</label>
-                    <select class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500">
-                        <option value="bronze">Bronze</option>
-                        <option value="silver">Silver</option>
-                        <option value="gold">Gold</option>
+                    <select name="member_tier_id" x-model="member_tier_id" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500">
+                        @foreach(($tiers ?? []) as $t)
+                            <option value="{{ $t->id }}">{{ $t->name }}</option>
+                        @endforeach
                     </select>
                 </div>
                 
                 <div>
                     <label class="flex items-center space-x-3">
-                        <input type="checkbox" checked class="w-5 h-5 bg-neutral-800 border-neutral-700 rounded">
+                        <input type="checkbox" name="status" value="active" :checked="statusChecked" class="w-5 h-5 bg-neutral-800 border-neutral-700 rounded">
                         <span class="text-sm font-medium">Aktifkan user</span>
                     </label>
                 </div>
@@ -545,7 +476,4 @@
     </div>
 </div>
 
-@php
-    $role = 'admin';
-@endphp
 @endsection

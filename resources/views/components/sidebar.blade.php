@@ -23,7 +23,7 @@
     <!-- Navigation -->
     <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         @php
-            $role = $role ?? 'admin'; // Default role, akan diganti dengan auth()->user()->role
+            $role = Auth::user()->role ?? 'admin';
             
             $menus = [
                 'admin' => [
@@ -70,12 +70,15 @@
             <i class="fas fa-cog text-lg w-5 text-center"></i>
             <span x-show="sidebarOpen" class="font-medium" x-transition>Pengaturan</span>
         </a>
-        <a href="{{ route('login') }}" 
-           class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-red-400 hover:bg-red-950 hover:text-red-300 mt-2"
-           x-tooltip="!sidebarOpen ? 'Logout' : ''">
-            <i class="fas fa-sign-out-alt text-lg w-5 text-center"></i>
-            <span x-show="sidebarOpen" class="font-medium" x-transition>Logout</span>
-        </a>
+        <form method="POST" action="{{ route('logout') }}" class="mt-2">
+            @csrf
+            <button type="submit"
+                class="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-red-400 hover:bg-red-950 hover:text-red-300"
+                x-tooltip="!sidebarOpen ? 'Logout' : ''">
+                <i class="fas fa-sign-out-alt text-lg w-5 text-center"></i>
+                <span x-show="sidebarOpen" class="font-medium" x-transition>Logout</span>
+            </button>
+        </form>
     </div>
     
     <!-- Toggle Button -->

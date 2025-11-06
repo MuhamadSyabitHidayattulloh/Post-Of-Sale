@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\View;
+use App\Models\Transaction;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Share recent transactions to navbar as notifications
+        View::composer('components.navbar', function ($view) {
+            $recent = Transaction::orderByDesc('created_at')->limit(5)->get();
+            $view->with('navbarNotifications', $recent);
+        });
     }
 }

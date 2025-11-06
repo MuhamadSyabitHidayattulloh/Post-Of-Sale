@@ -6,11 +6,36 @@
 @section('page-subtitle', 'Kelola semua produk di toko Anda')
 
 @section('page-content')
-<div class="space-y-6" x-data="{ viewMode: 'grid', showModal: false, modalMode: 'add' }">
+<div class="space-y-6" x-data="{
+    viewMode: 'grid', showModal: false, modalMode: 'add',
+    // form state
+    storeUrl: '{{ route('admin.products.store') }}',
+    updateUrlTemplate: '{{ url('/admin/products/__ID__') }}',
+    formAction: '{{ route('admin.products.store') }}',
+    editId: null,
+    name: '', sku: '', category_id: '', price: '', stock: '', barcode: '', description: '', is_active: true,
+    openAdd() {
+        this.modalMode = 'add'; this.formAction = this.storeUrl; this.editId = null;
+        this.name=''; this.sku=''; this.category_id=''; this.price=''; this.stock=''; this.barcode=''; this.description=''; this.is_active=true;
+        this.showModal = true;
+    },
+    openEdit(p) {
+        this.modalMode = 'edit'; this.editId = p.id; this.formAction = this.updateUrlTemplate.replace('__ID__', p.id);
+        this.name = p.name || ''; this.sku = p.sku || ''; this.category_id = p.category_id || ''; this.price = p.price || '';
+        this.stock = p.stock || ''; this.barcode = p.barcode || ''; this.description = p.description || ''; this.is_active = !!p.is_active;
+        this.showModal = true;
+    }
+}">
+    @if(session('status'))
+        <div class="bg-green-500/10 border border-green-600 text-green-400 px-4 py-3 rounded-lg">{{ session('status') }}</div>
+    @endif
+    @if($errors->any())
+        <div class="bg-red-500/10 border border-red-600 text-red-400 px-4 py-3 rounded-lg">{{ $errors->first() }}</div>
+    @endif
     <!-- Header Actions -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div class="flex items-center space-x-4">
-            <button @click="showModal = true; modalMode = 'add'" 
+            <button @click="openAdd()" 
                     class="px-4 py-2.5 bg-white text-black rounded-lg font-semibold hover:bg-neutral-200 transition-all duration-200 flex items-center space-x-2">
                 <i class="fas fa-plus"></i>
                 <span>Tambah Produk</span>
@@ -30,34 +55,36 @@
     <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Search -->
-            <div class="md:col-span-2 relative">
+            <form method="GET" class="md:col-span-2 relative">
                 <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-500"></i>
-                <input type="text" placeholder="Cari produk..." 
+                <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari produk..." 
                        class="w-full bg-neutral-800 border border-neutral-700 rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:border-neutral-500 transition-colors">
-            </div>
+            </form>
             
             <!-- Category Filter -->
-            <select class="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500 transition-colors">
-                <option>Semua Kategori</option>
-                <option>Elektronik</option>
-                <option>Fashion</option>
-                <option>Makanan</option>
-                <option>Minuman</option>
-                <option>Peralatan</option>
-            </select>
+            <form method="GET">
+                <select name="category_id" class="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500 transition-colors" onchange="this.form.submit()">
+                    <option value="">Semua Kategori</option>
+                    @foreach($categories as $cat)
+                        <option value="{{ $cat->id }}" @selected(request('category_id')==$cat->id)>{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+            </form>
             
             <!-- Stock Filter -->
-            <select class="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500 transition-colors">
-                <option>Semua Stok</option>
-                <option>Stok Tersedia</option>
-                <option>Stok Rendah (&lt;10)</option>
-                <option>Stok Habis</option>
-            </select>
+            <form method="GET">
+                <select name="stock" class="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500 transition-colors" onchange="this.form.submit()">
+                    <option value="">Semua Stok</option>
+                    <option value="available" @selected(request('stock')==='available')>Stok Tersedia</option>
+                    <option value="low" @selected(request('stock')==='low')>Stok Rendah (&lt;10)</option>
+                    <option value="out" @selected(request('stock')==='out')>Stok Habis</option>
+                </select>
+            </form>
         </div>
         
         <!-- View Mode Toggle -->
         <div class="flex items-center justify-between mt-4 pt-4 border-t border-neutral-800">
-            <p class="text-sm text-neutral-400">Menampilkan <span class="font-semibold text-white">248</span> produk</p>
+            <p class="text-sm text-neutral-400">Menampilkan <span class="font-semibold text-white">{{ $products->total() }}</span> produk</p>
             <div class="flex items-center space-x-2">
                 <span class="text-sm text-neutral-400 mr-2">Tampilan:</span>
                 <button @click="viewMode = 'grid'" 
@@ -76,16 +103,16 @@
     
     <!-- Products Grid View -->
     <div x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        @for($i = 1; $i <= 12; $i++)
+        @forelse($products as $product)
         <div class="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden hover:border-neutral-600 transition-all duration-300 group">
             <!-- Product Image -->
             <div class="relative h-48 bg-neutral-800 flex items-center justify-center overflow-hidden">
                 <i class="fas fa-box text-6xl text-neutral-700 group-hover:scale-110 transition-transform duration-300"></i>
-                @if($i % 3 === 0)
+                @if($product->stock > 0 && $product->stock < 10)
                 <span class="absolute top-3 right-3 px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded">
                     Stok Rendah
                 </span>
-                @elseif($i % 2 === 0)
+                @elseif($product->sold_count > 50)
                 <span class="absolute top-3 right-3 px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded">
                     Best Seller
                 </span>
@@ -93,42 +120,50 @@
                 
                 <!-- Hover Actions -->
                 <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center space-x-2">
-                    <button @click="showModal = true; modalMode = 'edit'" 
+                    <button type="button"
+                            data-product="{{ htmlspecialchars(json_encode(['id'=>$product->id,'name'=>$product->name,'sku'=>$product->sku,'category_id'=>$product->category_id,'price'=>$product->price,'stock'=>$product->stock,'barcode'=>$product->barcode,'description'=>$product->description,'is_active'=>$product->is_active]), ENT_QUOTES, 'UTF-8') }}" 
+                            @click="openEdit(JSON.parse($event.target.closest('button').getAttribute('data-product')))" 
                             class="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform">
                         <i class="fas fa-edit text-black"></i>
                     </button>
-                    <button class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center hover:scale-110 transition-transform">
-                        <i class="fas fa-trash text-white"></i>
-                    </button>
+                    <form method="POST" action="{{ route('admin.products.destroy', $product->id) }}" onsubmit="return confirm('Hapus produk ini?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center hover:scale-110 transition-transform">
+                            <i class="fas fa-trash text-white"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
             
             <!-- Product Info -->
             <div class="p-4">
                 <div class="flex items-start justify-between mb-2">
-                    <h3 class="font-semibold text-lg">Produk {{ $i }}</h3>
-                    <span class="text-xs px-2 py-1 bg-neutral-800 rounded">SKU-{{ str_pad($i, 3, '0', STR_PAD_LEFT) }}</span>
+                    <h3 class="font-semibold text-lg">{{ $product->name }}</h3>
+                    <span class="text-xs px-2 py-1 bg-neutral-800 rounded">{{ $product->sku }}</span>
                 </div>
-                <p class="text-sm text-neutral-400 mb-3">Kategori {{ $i % 5 === 0 ? 'Elektronik' : 'Fashion' }}</p>
+                <p class="text-sm text-neutral-400 mb-3">{{ $product->category?->name }}</p>
                 
                 <div class="flex items-center justify-between mb-3">
-                    <span class="text-xl font-bold">Rp {{ number_format(100000 * $i, 0, ',', '.') }}</span>
+                    <span class="text-xl font-bold">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
                 </div>
                 
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-neutral-400">Stok:</span>
-                    <span class="font-semibold {{ $i % 3 === 0 ? 'text-red-500' : 'text-green-500' }}">
-                        {{ $i % 3 === 0 ? '5' : '50' }} unit
+                    <span class="font-semibold {{ $product->stock < 10 ? 'text-red-500' : 'text-green-500' }}">
+                        {{ $product->stock }} unit
                     </span>
                 </div>
                 
                 <div class="flex items-center justify-between text-sm mt-2">
                     <span class="text-neutral-400">Terjual:</span>
-                    <span class="font-semibold">{{ 100 - ($i * 5) }} unit</span>
+                    <span class="font-semibold">{{ $product->sold_count }} unit</span>
                 </div>
             </div>
         </div>
-        @endfor
+        @empty
+            <div class="col-span-4 text-center text-neutral-400">Tidak ada produk.</div>
+        @endforelse
     </div>
     
     <!-- Products List View -->
@@ -148,7 +183,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-neutral-800">
-                    @for($i = 1; $i <= 12; $i++)
+                    @forelse($products as $product)
                     <tr class="hover:bg-neutral-800/50 transition-colors">
                         <td class="px-6 py-4">
                             <div class="flex items-center space-x-3">
@@ -156,22 +191,22 @@
                                     <i class="fas fa-box text-neutral-600"></i>
                                 </div>
                                 <div>
-                                    <p class="font-semibold">Produk {{ $i }}</p>
-                                    <p class="text-xs text-neutral-400">ID: PRD-{{ str_pad($i, 4, '0', STR_PAD_LEFT) }}</p>
+                                    <p class="font-semibold">{{ $product->name }}</p>
+                                    <p class="text-xs text-neutral-400">ID: PRD-{{ str_pad($product->id, 4, '0', STR_PAD_LEFT) }}</p>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-sm">SKU-{{ str_pad($i, 3, '0', STR_PAD_LEFT) }}</td>
-                        <td class="px-6 py-4 text-sm">{{ $i % 5 === 0 ? 'Elektronik' : 'Fashion' }}</td>
-                        <td class="px-6 py-4 text-right font-semibold">Rp {{ number_format(100000 * $i, 0, ',', '.') }}</td>
+                        <td class="px-6 py-4 text-sm">{{ $product->sku }}</td>
+                        <td class="px-6 py-4 text-sm">{{ $product->category?->name }}</td>
+                        <td class="px-6 py-4 text-right font-semibold">Rp {{ number_format($product->price, 0, ',', '.') }}</td>
                         <td class="px-6 py-4 text-center">
-                            <span class="px-2 py-1 text-xs font-semibold rounded {{ $i % 3 === 0 ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500' }}">
-                                {{ $i % 3 === 0 ? '5' : '50' }} unit
+                            <span class="px-2 py-1 text-xs font-semibold rounded {{ $product->stock < 10 ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500' }}">
+                                {{ $product->stock }} unit
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-center text-sm">{{ 100 - ($i * 5) }} unit</td>
+                        <td class="px-6 py-4 text-center text-sm">{{ $product->sold_count }} unit</td>
                         <td class="px-6 py-4 text-center">
-                            @if($i % 2 === 0)
+                            @if($product->is_active)
                             <span class="px-2 py-1 text-xs font-semibold bg-green-500/10 text-green-500 rounded">Aktif</span>
                             @else
                             <span class="px-2 py-1 text-xs font-semibold bg-neutral-700 text-neutral-400 rounded">Draft</span>
@@ -179,39 +214,36 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center justify-center space-x-2">
-                                <button @click="showModal = true; modalMode = 'edit'" 
+                                <button type="button"
+                                        data-product="{{ htmlspecialchars(json_encode(['id'=>$product->id,'name'=>$product->name,'sku'=>$product->sku,'category_id'=>$product->category_id,'price'=>$product->price,'stock'=>$product->stock,'barcode'=>$product->barcode,'description'=>$product->description,'is_active'=>$product->is_active]), ENT_QUOTES, 'UTF-8') }}" 
+                                        @click="openEdit(JSON.parse($event.target.closest('button').getAttribute('data-product')))" 
                                         class="p-2 hover:bg-neutral-700 rounded-lg transition-colors" 
                                         title="Edit">
                                     <i class="fas fa-edit text-blue-500"></i>
                                 </button>
-                                <button class="p-2 hover:bg-neutral-700 rounded-lg transition-colors" 
-                                        title="Hapus">
-                                    <i class="fas fa-trash text-red-500"></i>
-                                </button>
+                                <form method="POST" action="{{ route('admin.products.destroy', $product->id) }}" class="inline" onsubmit="return confirm('Hapus produk ini?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="p-2 hover:bg-neutral-700 rounded-lg transition-colors" title="Hapus">
+                                        <i class="fas fa-trash text-red-500"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
-                    @endfor
+                    @empty
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-neutral-400">Tidak ada produk.</td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
         
         <!-- Pagination -->
         <div class="px-6 py-4 border-t border-neutral-800 flex items-center justify-between">
-            <p class="text-sm text-neutral-400">Menampilkan 1-12 dari 248 produk</p>
-            <div class="flex items-center space-x-2">
-                <button class="px-3 py-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <button class="px-3 py-2 bg-white text-black rounded-lg font-semibold">1</button>
-                <button class="px-3 py-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors">2</button>
-                <button class="px-3 py-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors">3</button>
-                <span class="px-3 py-2 text-neutral-400">...</span>
-                <button class="px-3 py-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors">21</button>
-                <button class="px-3 py-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
+            <p class="text-sm text-neutral-400">Menampilkan {{ $products->firstItem() }}-{{ $products->lastItem() }} dari {{ $products->total() }} produk</p>
+            <div class="text-right">{{ $products->onEachSide(1)->links() }}</div>
         </div>
     </div>
     
@@ -245,7 +277,9 @@
             </div>
             
             <!-- Modal Body -->
-            <form class="p-6 space-y-6">
+            <form class="p-6 space-y-6" method="POST" :action="formAction">
+                @csrf
+                <template x-if="modalMode === 'edit'"><input type="hidden" name="_method" value="PUT"></template>
                 <!-- Product Image -->
                 <div>
                     <label class="block text-sm font-medium mb-2">Foto Produk</label>
@@ -260,11 +294,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-2">Nama Produk</label>
-                        <input type="text" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="Masukkan nama produk">
+                        <input type="text" name="name" x-model="name" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="Masukkan nama produk" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">SKU</label>
-                        <input type="text" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="SKU-001">
+                        <input type="text" name="sku" x-model="sku" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="SKU-001" required>
                     </div>
                 </div>
                 
@@ -272,17 +306,16 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-2">Kategori</label>
-                        <select class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500">
-                            <option>Pilih Kategori</option>
-                            <option>Elektronik</option>
-                            <option>Fashion</option>
-                            <option>Makanan</option>
-                            <option>Minuman</option>
+                        <select name="category_id" x-model="category_id" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" required>
+                            <option value="">Pilih Kategori</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Harga</label>
-                        <input type="number" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="100000">
+                        <input type="number" name="price" step="0.01" x-model="price" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="100000" required>
                     </div>
                 </div>
                 
@@ -290,24 +323,24 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-2">Stok</label>
-                        <input type="number" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="50">
+                        <input type="number" name="stock" x-model="stock" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="50" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Barcode</label>
-                        <input type="text" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="1234567890">
+                        <input type="text" name="barcode" x-model="barcode" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="1234567890">
                     </div>
                 </div>
                 
                 <!-- Description -->
                 <div>
                     <label class="block text-sm font-medium mb-2">Deskripsi</label>
-                    <textarea rows="4" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="Deskripsi produk..."></textarea>
+                    <textarea rows="4" name="description" x-model="description" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="Deskripsi produk..."></textarea>
                 </div>
                 
                 <!-- Status -->
                 <div>
                     <label class="flex items-center space-x-3">
-                        <input type="checkbox" checked class="w-5 h-5 bg-neutral-800 border-neutral-700 rounded">
+                        <input type="checkbox" name="is_active" :checked="is_active" value="1" class="w-5 h-5 bg-neutral-800 border-neutral-700 rounded">
                         <span class="text-sm font-medium">Aktifkan produk</span>
                     </label>
                 </div>

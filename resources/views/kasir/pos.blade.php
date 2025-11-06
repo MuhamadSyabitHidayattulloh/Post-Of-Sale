@@ -6,93 +6,126 @@
 @section('page-subtitle', 'Sistem kasir untuk transaksi')
 
 @section('page-content')
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6" x-data="{
-    cart: [],
-    searchQuery: '',
-    barcodeInput: '',
-    selectedMember: null,
-    paymentMethod: 'cash',
-    cashReceived: 0,
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6" x-data='posApp(@json($posPayload))'
+    x-init="init()">
     
-    addToCart(product) {
-        const existingItem = this.cart.find(item => item.id === product.id);
-        if (existingItem) {
-            existingItem.quantity++;
-        } else {
-            this.cart.push({...product, quantity: 1});
-        }
-    },
-    
-    removeFromCart(index) {
-        this.cart.splice(index, 1);
-    },
-    
-    updateQuantity(index, change) {
-        this.cart[index].quantity += change;
-        if (this.cart[index].quantity <= 0) {
-            this.removeFromCart(index);
-        }
-    },
-    
-    get subtotal() {
-        return this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    },
-    
-    get discount() {
-        if (!this.selectedMember) return 0;
-        const discountRate = this.selectedMember.tier === 'gold' ? 0.15 : 
-                            this.selectedMember.tier === 'silver' ? 0.10 : 0.05;
-        return this.subtotal * discountRate;
-    },
-    
-    get tax() {
-        return (this.subtotal - this.discount) * 0.11;
-    },
-    
-    get total() {
-        return this.subtotal - this.discount + this.tax;
-    },
-    
-    get change() {
-        return this.cashReceived - this.total;
-    },
-    
-    clearCart() {
-        this.cart = [];
-        this.selectedMember = null;
-        this.cashReceived = 0;
-        this.barcodeInput = '';
-    },
-    
-    checkout() {
-        if (this.cart.length === 0) {
-            alert('Keranjang masih kosong!');
-            return;
-        }
-        if (this.paymentMethod === 'cash' && this.cashReceived < this.total) {
-            alert('Uang yang diterima kurang!');
-            return;
-        }
-        // Process checkout
-        alert('Transaksi berhasil! Total: Rp ' + this.total.toLocaleString('id-ID'));
-        this.clearCart();
-    },
-    
-    scanBarcode() {
-        if (this.barcodeInput) {
-            // Simulate finding product by barcode
-            const dummyProduct = {
-                id: Math.random(),
-                name: 'Produk (Barcode: ' + this.barcodeInput + ')',
-                price: 50000,
-                stock: 10,
-                sku: this.barcodeInput
-            };
-            this.addToCart(dummyProduct);
-            this.barcodeInput = '';
-        }
+    <script>
+    function posApp(initial){
+        return {
+            products: initial.products || [],
+            categories: initial.categories || [],
+            members: initial.members || [],
+            selectedCategoryId: null,
+            cart: [],
+            searchQuery: '',
+            barcodeInput: '',
+            selectedMember: null,
+            paymentMethod: 'cash',
+            cashReceived: 0,
+            init(){},
+            get filteredProducts(){
+                const q = this.searchQuery.toLowerCase();
+                return this.products.filter(p => {
+                    const byCat = this.selectedCategoryId ? (p.category_id === this.selectedCategoryId) : true;
+                    const byName = q ? (p.name.toLowerCase().includes(q) || (p.sku||'').toLowerCase().includes(q)) : true;
+                    return byCat && byName;
+                });
+            },
+            addToCart(product) {
+                const existingItem = this.cart.find(item => item.id === product.id);
+                if (existingItem) {
+                    existingItem.quantity++;
+                } else {
+                    this.cart.push({...product, quantity: 1});
+                }
+            },
+            removeFromCart(index) {
+                this.cart.splice(index, 1);
+            },
+            updateQuantity(index, change) {
+                this.cart[index].quantity += change;
+                if (this.cart[index].quantity <= 0) {
+                    this.removeFromCart(index);
+                }
+            },
+            get subtotal() {
+                return this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            },
+            get discount() {
+                if (!this.selectedMember) return 0;
+                const tier = (this.selectedMember.tier||'').toLowerCase();
+                const discountRate = tier === 'gold' ? 0.15 : tier === 'silver' ? 0.10 : 0.05;
+                return this.subtotal * discountRate;
+            },
+            get tax() {
+                return (this.subtotal - this.discount) * 0.11;
+            },
+            get total() {
+                return this.subtotal - this.discount + this.tax;
+            },
+            get change() {
+                return this.cashReceived - this.total;
+            },
+            clearCart() {
+                this.cart = [];
+                this.selectedMember = null;
+                this.cashReceived = 0;
+                this.barcodeInput = '';
+            },
+                    async checkout() {
+                if (this.cart.length === 0) {
+                    alert('Keranjang masih kosong!');
+                    return;
+                }
+                if (this.paymentMethod === 'cash' && this.cashReceived < this.total) {
+                    alert('Uang yang diterima kurang!');
+                    return;
+                }
+
+                const payload = {
+                    items: this.cart.map(i => ({ product_id: i.id, quantity: i.quantity })),
+                    member_id: this.selectedMember ? this.selectedMember.id : null,
+                    payment_method: this.paymentMethod,
+                    paid_amount: this.paymentMethod === 'cash' ? this.cashReceived : this.total,
+                };
+                try {
+                    const res = await fetch('{{ route('kasir.checkout') }}', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json', 
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) throw new Error(data.message || 'Gagal checkout');
+                    alert('Transaksi berhasil! Kode: ' + data.transaction.code + ' Total: Rp ' + Number(data.transaction.total).toLocaleString('id-ID'));
+                    this.clearCart();
+                } catch (e) {
+                    alert(e.message);
+                }
+            },
+            async scanBarcode() {
+                if (!this.barcodeInput) return;
+                try {
+                    const url = new URL('{{ route('kasir.barcode') }}', window.location.origin);
+                    url.searchParams.set('code', this.barcodeInput);
+                    const res = await fetch(url.toString());
+                    const data = await res.json();
+                    if (data.success && data.product) {
+                        this.addToCart({ id: data.product.id, name: data.product.name, price: Number(data.product.price), stock: Number(data.product.stock), sku: data.product.sku });
+                        this.barcodeInput = '';
+                    } else {
+                        alert(data.message || 'Produk tidak ditemukan');
+                    }
+                } catch (e) {
+                    alert('Gagal scan barcode');
+                }
+            }
+        };
     }
-}">
+    </script>
     
     <!-- Left Section - Products -->
     <div class="lg:col-span-2 space-y-6">
@@ -137,45 +170,24 @@
         
         <!-- Product Categories (Quick Filter) -->
         <div class="flex space-x-2 overflow-x-auto pb-2">
-            <button class="px-4 py-2 bg-white text-black rounded-lg font-medium whitespace-nowrap">
-                Semua
-            </button>
-            <button class="px-4 py-2 bg-neutral-800 text-neutral-400 hover:text-white rounded-lg font-medium whitespace-nowrap hover:bg-neutral-700 transition-colors">
-                Elektronik
-            </button>
-            <button class="px-4 py-2 bg-neutral-800 text-neutral-400 hover:text-white rounded-lg font-medium whitespace-nowrap hover:bg-neutral-700 transition-colors">
-                Fashion
-            </button>
-            <button class="px-4 py-2 bg-neutral-800 text-neutral-400 hover:text-white rounded-lg font-medium whitespace-nowrap hover:bg-neutral-700 transition-colors">
-                Makanan
-            </button>
-            <button class="px-4 py-2 bg-neutral-800 text-neutral-400 hover:text-white rounded-lg font-medium whitespace-nowrap hover:bg-neutral-700 transition-colors">
-                Minuman
-            </button>
+            <button @click="selectedCategoryId = null" :class="selectedCategoryId===null ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-400'" class="px-4 py-2 rounded-lg font-medium whitespace-nowrap">Semua</button>
+            <template x-for="cat in categories" :key="cat.id">
+                <button @click="selectedCategoryId = cat.id" :class="selectedCategoryId===cat.id ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-400'" class="px-4 py-2 rounded-lg font-medium whitespace-nowrap hover:bg-neutral-700 transition-colors" x-text="cat.name"></button>
+            </template>
         </div>
         
         <!-- Products Grid -->
         <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-            @for($i = 1; $i <= 12; $i++)
-            <button 
-                @click="addToCart({
-                    id: {{ $i }},
-                    name: 'Produk {{ $i }}',
-                    price: {{ 50000 + ($i * 10000) }},
-                    stock: {{ 50 - $i }},
-                    sku: 'SKU-{{ str_pad($i, 3, '0', STR_PAD_LEFT) }}'
-                })"
-                class="bg-neutral-900 border border-neutral-800 rounded-xl p-4 hover:border-neutral-600 transition-all duration-200 hover:scale-105 text-left">
-                
-                <div class="aspect-square bg-neutral-800 rounded-lg flex items-center justify-center mb-3">
-                    <i class="fas fa-box text-4xl text-neutral-600"></i>
-                </div>
-                
-                <h4 class="font-semibold text-sm mb-1 truncate">Produk {{ $i }}</h4>
-                <p class="text-xs text-neutral-400 mb-2">Stok: {{ 50 - $i }}</p>
-                <p class="font-bold text-sm">Rp {{ number_format(50000 + ($i * 10000), 0, ',', '.') }}</p>
-            </button>
-            @endfor
+            <template x-for="p in filteredProducts" :key="p.id">
+                <button @click="addToCart(p)" class="bg-neutral-900 border border-neutral-800 rounded-xl p-4 hover:border-neutral-600 transition-all duration-200 hover:scale-105 text-left">
+                    <div class="aspect-square bg-neutral-800 rounded-lg flex items-center justify-center mb-3">
+                        <i class="fas fa-box text-4xl text-neutral-600"></i>
+                    </div>
+                    <h4 class="font-semibold text-sm mb-1 truncate" x-text="p.name"></h4>
+                    <p class="text-xs text-neutral-400 mb-2" x-text="'Stok: ' + p.stock"></p>
+                    <p class="font-bold text-sm" x-text="'Rp ' + Number(p.price).toLocaleString('id-ID')"></p>
+                </button>
+            </template>
         </div>
     </div>
     
@@ -229,14 +241,12 @@
                             <input type="text" placeholder="Cari member..." 
                                    class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-neutral-500">
                             <div class="space-y-2 max-h-96 overflow-y-auto">
-                                @foreach(['Ahmad Rizki' => 'bronze', 'Dewi Lestari' => 'silver', 'Eko Prasetyo' => 'gold'] as $name => $tier)
-                                <button 
-                                    @click="selectedMember = {name: '{{ $name }}', tier: '{{ $tier }}'}; showMemberModal = false"
-                                    class="w-full p-3 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-left transition-colors">
-                                    <p class="font-semibold text-sm">{{ $name }}</p>
-                                    <p class="text-xs text-neutral-400">Tier: <span class="capitalize">{{ $tier }}</span></p>
-                                </button>
-                                @endforeach
+                                <template x-for="m in members" :key="m.id">
+                                    <button @click="selectedMember = m; showMemberModal = false" class="w-full p-3 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-left transition-colors">
+                                        <p class="font-semibold text-sm" x-text="m.name"></p>
+                                        <p class="text-xs text-neutral-400">Tier: <span class="capitalize" x-text="m.tier"></span></p>
+                                    </button>
+                                </template>
                             </div>
                         </div>
                     </div>
@@ -371,8 +381,6 @@
     </div>
 </div>
 
-@php
-    $role = 'kasir';
-    $userName = 'Budi Santoso';
-@endphp
+@php($role = $role ?? 'kasir')
+@php($userName = $userName ?? 'Kasir')
 @endsection

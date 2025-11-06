@@ -3,7 +3,7 @@
 @section('title', 'Dashboard Member')
 
 @section('page-title', 'Dashboard Member')
-@section('page-subtitle', 'Selamat datang, Ahmad Rizki')
+@section('page-subtitle', 'Selamat datang, ' . ($userName ?? 'Member'))
 
 @section('page-content')
 <div class="space-y-6">
@@ -11,32 +11,32 @@
     <div class="bg-gradient-to-br from-yellow-500/20 to-transparent border-2 border-yellow-500/50 rounded-xl p-6">
         <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
             <div class="w-24 h-24 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <span class="text-3xl font-bold">AR</span>
+                <span class="text-3xl font-bold">{{ strtoupper(substr($member->name ?? 'M', 0, 2)) }}</span>
             </div>
             
             <div class="flex-1 text-center md:text-left">
-                <h2 class="text-2xl font-bold mb-2">Ahmad Rizki</h2>
-                <p class="text-neutral-400 mb-4">Member sejak Januari 2024</p>
+                <h2 class="text-2xl font-bold mb-2">{{ $member->name ?? 'Member' }}</h2>
+                <p class="text-neutral-400 mb-4">Member sejak {{ optional($member->created_at)->translatedFormat('F Y') }}</p>
                 
                 <div class="flex flex-wrap items-center gap-4 justify-center md:justify-start">
                     <div class="flex items-center space-x-2">
                         <i class="fas fa-crown text-yellow-500"></i>
-                        <span class="font-semibold text-yellow-500">Gold Member</span>
+                        <span class="font-semibold text-yellow-500">{{ $member->tier->name ?? 'Bronze' }} Member</span>
                     </div>
                     <div class="flex items-center space-x-2">
                         <i class="fas fa-star text-yellow-500"></i>
-                        <span>1,250 Poin</span>
+                        <span>{{ number_format((int) ($member->points ?? 0), 0, ',', '.') }} Poin</span>
                     </div>
                     <div class="flex items-center space-x-2">
                         <i class="fas fa-shopping-bag text-green-500"></i>
-                        <span>45 Transaksi</span>
+                        <span>{{ $totalTransactions ?? 0 }} Transaksi</span>
                     </div>
                 </div>
             </div>
             
             <div class="text-center md:text-right">
                 <p class="text-sm text-neutral-400 mb-2">Member ID</p>
-                <p class="text-xl font-bold font-mono">MBR-0042</p>
+                <p class="text-xl font-bold font-mono">MBR-{{ str_pad((string) ($member->id ?? 0), 4, '0', STR_PAD_LEFT) }}</p>
             </div>
         </div>
     </div>
@@ -49,7 +49,7 @@
                     <i class="fas fa-shopping-cart text-purple-500 text-xl"></i>
                 </div>
             </div>
-            <h3 class="text-2xl font-bold mb-1">45</h3>
+            <h3 class="text-2xl font-bold mb-1">{{ $totalTransactions ?? 0 }}</h3>
             <p class="text-sm text-neutral-400">Total Pembelian</p>
         </div>
         
@@ -59,7 +59,7 @@
                     <i class="fas fa-money-bill-wave text-green-500 text-xl"></i>
                 </div>
             </div>
-            <h3 class="text-2xl font-bold mb-1">Rp 8.500.000</h3>
+            <h3 class="text-2xl font-bold mb-1">Rp {{ number_format((int) ($totalSpent ?? 0), 0, ',', '.') }}</h3>
             <p class="text-sm text-neutral-400">Total Belanja</p>
         </div>
         
@@ -69,7 +69,7 @@
                     <i class="fas fa-percent text-blue-500 text-xl"></i>
                 </div>
             </div>
-            <h3 class="text-2xl font-bold mb-1">Rp 1.275.000</h3>
+            <h3 class="text-2xl font-bold mb-1">Rp {{ number_format((int) ($totalSaved ?? 0), 0, ',', '.') }}</h3>
             <p class="text-sm text-neutral-400">Total Hemat</p>
         </div>
         
@@ -79,7 +79,7 @@
                     <i class="fas fa-star text-yellow-500 text-xl"></i>
                 </div>
             </div>
-            <h3 class="text-2xl font-bold mb-1">1,250</h3>
+            <h3 class="text-2xl font-bold mb-1">{{ number_format((int) ($member->points ?? 0), 0, ',', '.') }}</h3>
             <p class="text-sm text-neutral-400">Poin Rewards</p>
         </div>
     </div>
@@ -158,12 +158,12 @@
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-sm text-neutral-400">Poin Anda</span>
-                    <span class="text-2xl font-bold">1,250</span>
+                    <span class="text-2xl font-bold">{{ number_format((int) ($member->points ?? 0), 0, ',', '.') }}</span>
                 </div>
                 <div class="bg-neutral-800 rounded-full h-3 overflow-hidden">
-                    <div class="bg-gradient-to-r from-yellow-500 to-orange-500 h-full rounded-full" style="width: 62.5%"></div>
+                    <div class="bg-gradient-to-r from-yellow-500 to-orange-500 h-full rounded-full" style="width: 50%"></div>
                 </div>
-                <p class="text-xs text-neutral-400 mt-2">750 poin lagi untuk reward berikutnya</p>
+                <p class="text-xs text-neutral-400 mt-2">Nikmati reward sesuai ketentuan</p>
             </div>
             
             <div class="space-y-3">
@@ -266,21 +266,23 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-neutral-800">
-                    @for($i = 1; $i <= 10; $i++)
+                    @forelse(($recent ?? []) as $trx)
                     <tr class="hover:bg-neutral-800/50 transition-colors">
-                        <td class="px-6 py-4 font-mono text-sm">TRX-{{ str_pad($i, 6, '0', STR_PAD_LEFT) }}</td>
-                        <td class="px-6 py-4 text-sm">{{ date('d M Y', strtotime('-' . $i . ' days')) }}</td>
-                        <td class="px-6 py-4 text-sm">{{ rand(1, 5) }} item</td>
-                        <td class="px-6 py-4 text-right text-sm">Rp {{ number_format(200000 + ($i * 50000), 0, ',', '.') }}</td>
-                        <td class="px-6 py-4 text-right text-sm text-green-500">-Rp {{ number_format((200000 + ($i * 50000)) * 0.15, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4 text-right font-semibold">Rp {{ number_format((200000 + ($i * 50000)) * 0.85, 0, ',', '.') }}</td>
+                        <td class="px-6 py-4 font-mono text-sm">{{ $trx->code }}</td>
+                        <td class="px-6 py-4 text-sm">{{ $trx->created_at?->format('d M Y') }}</td>
+                        <td class="px-6 py-4 text-sm">{{ $trx->items_count }} item</td>
+                        <td class="px-6 py-4 text-right text-sm">Rp {{ number_format((int) $trx->subtotal, 0, ',', '.') }}</td>
+                        <td class="px-6 py-4 text-right text-sm text-green-500">-Rp {{ number_format((int) $trx->discount, 0, ',', '.') }}</td>
+                        <td class="px-6 py-4 text-right font-semibold">Rp {{ number_format((int) $trx->total, 0, ',', '.') }}</td>
                         <td class="px-6 py-4 text-center">
                             <span class="px-2 py-1 bg-yellow-500/10 text-yellow-500 text-xs font-semibold rounded">
-                                +{{ rand(20, 100) }}
+                                +{{ max(0, (int) round($trx->total / 10000)) }}
                             </span>
                         </td>
                     </tr>
-                    @endfor
+                    @empty
+                    <tr><td colspan="7" class="px-6 py-6 text-center text-neutral-400">Belum ada riwayat transaksi.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
@@ -303,8 +305,6 @@
     </div>
 </div>
 
-@php
-    $role = 'member';
-    $userName = 'Ahmad Rizki';
-@endphp
+@php($role = $role ?? 'member')
+@php($userName = $userName ?? ($member->name ?? 'Member'))
 @endsection

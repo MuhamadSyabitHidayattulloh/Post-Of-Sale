@@ -21,6 +21,12 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'status',
+        'member_tier_id',
+        'points',
+        'phone',
+        'avatar_url',
     ];
 
     /**
@@ -44,5 +50,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function tier()
+    {
+        return $this->belongsTo(\App\Models\Tier::class, 'member_tier_id');
     }
 }
