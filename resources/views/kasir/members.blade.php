@@ -14,21 +14,12 @@
         this.showModal = true;
     }
 }">
-    @if(session('status'))
-        <div class="bg-green-500/10 border border-green-600 text-green-400 px-4 py-3 rounded-lg">{{ session('status') }}</div>
-    @endif
-    @if($errors->any())
-        <div class="bg-red-500/10 border border-red-600 text-red-400 px-4 py-3 rounded-lg">
-            @foreach($errors->all() as $error)
-                <div>{{ $error }}</div>
-            @endforeach
-        </div>
-    @endif
+    <x-alerts />
 
     <!-- Header Actions -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div class="flex items-center space-x-4">
-            <button @click="openAdd()" 
+            <button @click="openAdd()"
                     class="px-4 py-2.5 bg-white text-black rounded-lg font-semibold hover:bg-neutral-200 transition-all duration-200 flex items-center space-x-2">
                 <i class="fas fa-user-plus"></i>
                 <span>Tambah Member</span>
@@ -40,7 +31,7 @@
     <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
         <form method="GET" class="relative">
             <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-500"></i>
-            <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari member..." 
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari member..."
                    class="w-full bg-neutral-800 border border-neutral-700 rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:border-neutral-500 transition-colors">
         </form>
     </div>
@@ -116,7 +107,7 @@
             <!-- Modal Body -->
             <form method="POST" action="{{ route('kasir.members.store') }}" class="p-6 space-y-6">
                 @csrf
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Name -->
                     <div>

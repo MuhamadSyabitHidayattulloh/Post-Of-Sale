@@ -50,18 +50,18 @@
 }">
     <!-- Tabs -->
     <div class="flex items-center space-x-4 border-b border-neutral-800">
-        <button @click="activeTab = 'users'" 
+        <button @click="activeTab = 'users'"
                 :class="activeTab === 'users' ? 'border-white text-white' : 'border-transparent text-neutral-400 hover:text-white'"
                 class="px-4 py-3 border-b-2 font-semibold transition-colors">
             <i class="fas fa-users mr-2"></i>User Management
         </button>
-        <button @click="activeTab = 'tiers'" 
+        <button @click="activeTab = 'tiers'"
                 :class="activeTab === 'tiers' ? 'border-white text-white' : 'border-transparent text-neutral-400 hover:text-white'"
                 class="px-4 py-3 border-b-2 font-semibold transition-colors">
             <i class="fas fa-crown mr-2"></i>Member Tiers
         </button>
     </div>
-    
+
     <!-- User Management Tab -->
     <div x-show="activeTab === 'users'" class="space-y-6">
         @if(session('status'))
@@ -82,7 +82,7 @@
                 <h3 class="font-semibold mb-1">Admin</h3>
                 <p class="text-sm text-neutral-400">Full Access</p>
             </div>
-            
+
             <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
@@ -93,7 +93,7 @@
                 <h3 class="font-semibold mb-1">Kasir</h3>
                 <p class="text-sm text-neutral-400">POS Access</p>
             </div>
-            
+
             <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
@@ -105,21 +105,21 @@
                 <p class="text-sm text-neutral-400">Customer</p>
             </div>
         </div>
-        
+
         <!-- Filter & Actions -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="flex items-center space-x-4">
-                <button @click="openAdd()" 
+                <button @click="openAdd()"
                         class="px-4 py-2.5 bg-white text-black rounded-lg font-semibold hover:bg-neutral-200 transition-all duration-200 flex items-center space-x-2">
                     <i class="fas fa-plus"></i>
                     <span>Tambah User</span>
                 </button>
             </div>
-            
+
             <form method="GET" action="{{ route('admin.users') }}" class="flex items-center space-x-4">
                 <div class="relative">
                     <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-500"></i>
-                    <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari user..." 
+                    <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari user..."
                            class="bg-neutral-900 border border-neutral-800 rounded-lg pl-12 pr-4 py-2.5 focus:outline-none focus:border-neutral-600 transition-colors w-64">
                 </div>
                 <select name="role" class="bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2.5 focus:outline-none focus:border-neutral-600 transition-colors">
@@ -131,7 +131,7 @@
                 <button type="submit" class="px-4 py-2.5 bg-neutral-800 rounded-lg font-medium hover:bg-neutral-700 transition-colors">Filter</button>
             </form>
         </div>
-        
+
         <!-- Users Table -->
         <div class="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
@@ -182,16 +182,19 @@
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center space-x-2">
                                     <button type="button"
-                                            data-user="{{ htmlspecialchars(json_encode(['id'=>$user->id,'name'=>$user->name,'email'=>$user->email,'role'=>$user->role,'status'=>$user->status,'member_tier_id'=>$user->member_tier_id]), ENT_QUOTES, 'UTF-8') }}" 
-                                            @click="openEdit(JSON.parse($event.target.closest('button').getAttribute('data-user')))" 
-                                            class="p-2 hover:bg-neutral-700 rounded-lg transition-colors" 
+                                            data-user="{{ htmlspecialchars(json_encode(['id'=>$user->id,'name'=>$user->name,'email'=>$user->email,'role'=>$user->role,'status'=>$user->status,'member_tier_id'=>$user->member_tier_id]), ENT_QUOTES, 'UTF-8') }}"
+                                            @click="openEdit(JSON.parse($event.target.closest('button').getAttribute('data-user')))"
+                                            class="p-2 hover:bg-neutral-700 rounded-lg transition-colors"
                                             title="Edit">
                                         <i class="fas fa-edit text-blue-500"></i>
                                     </button>
-                                    <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}" onsubmit="return confirm('Hapus user ini?');" class="inline">
+                                    <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}" class="inline delete-form">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="p-2 hover:bg-neutral-700 rounded-lg transition-colors" title="Hapus">
+                                        <button type="button"
+                                                onclick="confirmDelete(this, 'user')"
+                                                class="p-2 hover:bg-neutral-700 rounded-lg transition-colors"
+                                                title="Hapus">
                                             <i class="fas fa-trash text-red-500"></i>
                                         </button>
                                     </form>
@@ -213,7 +216,7 @@
             @endif
         </div>
     </div>
-    
+
     <!-- Member Tiers Tab -->
     <div x-show="activeTab === 'tiers'" class="space-y-6">
         <!-- Tier Cards -->
@@ -247,7 +250,7 @@
             </div>
             @endforeach
         </div>
-        
+
         <!-- Tier Settings -->
         <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
             <h3 class="text-lg font-semibold mb-6">Pengaturan Tier</h3>
@@ -285,7 +288,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Add/Edit User Modal -->
     <div x-show="showModal"
          x-transition:enter="transition ease-out duration-200"
@@ -297,7 +300,7 @@
          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
          style="display: none;"
          @click.self="showModal = false">
-        
+
         <div x-show="showModal"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 transform scale-95"
@@ -306,14 +309,14 @@
              x-transition:leave-start="opacity-100 transform scale-100"
              x-transition:leave-end="opacity-0 transform scale-95"
              class="bg-neutral-900 border border-neutral-800 rounded-xl w-full max-w-md">
-            
+
             <div class="px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
                 <h3 class="text-xl font-bold" x-text="modalMode === 'add' ? 'Tambah User Baru' : 'Edit User'"></h3>
                 <button @click="showModal = false" class="p-2 hover:bg-neutral-800 rounded-lg transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            
+
             <form class="p-6 space-y-4" method="POST" :action="formAction">
                 @csrf
                 <template x-if="modalMode === 'edit'">
@@ -323,17 +326,17 @@
                     <label class="block text-sm font-medium mb-2">Nama Lengkap</label>
                     <input type="text" name="name" x-model="formName" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="Masukkan nama lengkap" required>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">Email</label>
                     <input type="email" name="email" x-model="formEmail" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="email@example.com" required>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">Password</label>
                     <input type="password" name="password" x-model="formPassword" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" placeholder="••••••••" :required="modalMode === 'add'">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">Role</label>
                     <select x-model="userType" name="role" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500">
@@ -342,7 +345,7 @@
                         <option value="member">Member</option>
                     </select>
                 </div>
-                
+
                 <div x-show="userType === 'member'">
                     <label class="block text-sm font-medium mb-2">Tier Member</label>
                     <select name="member_tier_id" x-model="member_tier_id" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500">
@@ -351,14 +354,14 @@
                         @endforeach
                     </select>
                 </div>
-                
+
                 <div>
                     <label class="flex items-center space-x-3">
                         <input type="checkbox" name="status" value="active" :checked="statusChecked" class="w-5 h-5 bg-neutral-800 border-neutral-700 rounded">
                         <span class="text-sm font-medium">Aktifkan user</span>
                     </label>
                 </div>
-                
+
                 <div class="flex items-center justify-end space-x-3 pt-4 border-t border-neutral-800">
                     <button type="button" @click="showModal = false" class="px-6 py-2.5 bg-neutral-800 rounded-lg font-medium hover:bg-neutral-700 transition-colors">
                         Batal
@@ -370,7 +373,7 @@
             </form>
         </div>
     </div>
-    
+
     <!-- Edit Tier Modal -->
     <div x-show="showTierModal"
          x-transition:enter="transition ease-out duration-200"
@@ -382,7 +385,7 @@
          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
          style="display: none;"
          @click.self="showTierModal = false">
-        
+
         <div x-show="showTierModal"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 transform scale-95"
@@ -391,7 +394,7 @@
              x-transition:leave-start="opacity-100 transform scale-100"
              x-transition:leave-end="opacity-0 transform scale-95"
              class="bg-neutral-900 border border-neutral-800 rounded-xl w-full max-w-md">
-            
+
             <div class="px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
                 <h3 class="text-xl font-bold">
                     Edit Tier <span x-text="editingTier.charAt(0).toUpperCase() + editingTier.slice(1)" class="capitalize"></span>
@@ -400,41 +403,41 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            
+
             <form class="p-6 space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-2">Nama Tier</label>
-                    <input type="text" 
+                    <input type="text"
                            :value="editingTier.charAt(0).toUpperCase() + editingTier.slice(1)"
-                           class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" 
+                           class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500"
                            placeholder="Nama tier">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">Deskripsi</label>
-                    <input type="text" 
-                           class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" 
+                    <input type="text"
+                           class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500"
                            :placeholder="editingTier === 'bronze' ? 'Tier Pemula' : editingTier === 'silver' ? 'Tier Menengah' : 'Tier Premium'">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">Minimum Pembelian (Rp)</label>
-                    <input type="number" 
-                           class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" 
+                    <input type="number"
+                           class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500"
                            :value="editingTier === 'bronze' ? '0' : editingTier === 'silver' ? '1000000' : '5000000'"
                            placeholder="0">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">Diskon (%)</label>
-                    <input type="number" 
-                           class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500" 
+                    <input type="number"
+                           class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500"
                            :value="editingTier === 'bronze' ? '5' : editingTier === 'silver' ? '10' : '15'"
-                           placeholder="0" 
-                           min="0" 
+                           placeholder="0"
+                           min="0"
                            max="100">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">Multiplier Poin</label>
                     <select class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500">
@@ -445,24 +448,24 @@
                         <option value="5">5x</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">Warna Icon</label>
                     <div class="flex items-center space-x-3">
-                        <input type="color" 
+                        <input type="color"
                                :value="editingTier === 'bronze' ? '#f97316' : editingTier === 'silver' ? '#9ca3af' : '#eab308'"
                                class="w-16 h-10 bg-neutral-800 border border-neutral-700 rounded-lg cursor-pointer">
                         <span class="text-sm text-neutral-400">Pilih warna untuk tier</span>
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">Benefit (pisahkan dengan enter)</label>
-                    <textarea rows="4" 
-                              class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500 resize-none" 
+                    <textarea rows="4"
+                              class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500 resize-none"
                               placeholder="Masukkan benefit tier..."></textarea>
                 </div>
-                
+
                 <div class="flex items-center justify-end space-x-3 pt-4 border-t border-neutral-800">
                     <button type="button" @click="showTierModal = false" class="px-6 py-2.5 bg-neutral-800 rounded-lg font-medium hover:bg-neutral-700 transition-colors">
                         Batal
@@ -475,5 +478,24 @@
         </div>
     </div>
 </div>
+
+<script>
+function confirmDelete(button, type = 'user') {
+    const form = button.closest('form');
+    const messages = {
+        user: 'Apakah Anda yakin ingin menghapus user ini? Tindakan ini tidak dapat dibatalkan.',
+        tier: 'Apakah Anda yakin ingin menghapus tier ini? Tindakan ini tidak dapat dibatalkan.'
+    };
+
+    window.dispatchEvent(new CustomEvent('confirm-dialog', {
+        detail: {
+            message: messages[type] || messages.user,
+            confirmText: 'Ya, Hapus',
+            cancelText: 'Batal',
+            callback: () => form.submit()
+        }
+    }));
+}
+</script>
 
 @endsection

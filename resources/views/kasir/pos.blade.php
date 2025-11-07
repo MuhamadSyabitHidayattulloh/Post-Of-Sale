@@ -8,7 +8,7 @@
 @section('page-content')
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" x-data='posApp(@json($posPayload))'
     x-init="init()">
-    
+
     <script>
     function posApp(initial){
         return {
@@ -74,11 +74,11 @@
             },
                     async checkout() {
                 if (this.cart.length === 0) {
-                    alert('Keranjang masih kosong!');
+                    showToast('Keranjang masih kosong!', 'warning');
                     return;
                 }
                 if (this.paymentMethod === 'cash' && this.cashReceived < this.total) {
-                    alert('Uang yang diterima kurang!');
+                    showToast('Uang yang diterima kurang!', 'error');
                     return;
                 }
 
@@ -91,8 +91,8 @@
                 try {
                     const res = await fetch('{{ route('kasir.checkout') }}', {
                         method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json', 
+                        headers: {
+                            'Content-Type': 'application/json',
                             'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                         },
@@ -100,10 +100,10 @@
                     });
                     const data = await res.json();
                     if (!res.ok || !data.success) throw new Error(data.message || 'Gagal checkout');
-                    alert('Transaksi berhasil! Kode: ' + data.transaction.code + ' Total: Rp ' + Number(data.transaction.total).toLocaleString('id-ID'));
+                    showToast('Transaksi berhasil! Kode: ' + data.transaction.code + ' | Total: Rp ' + Number(data.transaction.total).toLocaleString('id-ID'), 'success', 7000);
                     this.clearCart();
                 } catch (e) {
-                    alert(e.message);
+                    showToast(e.message, 'error');
                 }
             },
             async scanBarcode() {
@@ -116,17 +116,18 @@
                     if (data.success && data.product) {
                         this.addToCart({ id: data.product.id, name: data.product.name, price: Number(data.product.price), stock: Number(data.product.stock), sku: data.product.sku });
                         this.barcodeInput = '';
+                        showToast('Produk berhasil ditambahkan!', 'success', 2000);
                     } else {
-                        alert(data.message || 'Produk tidak ditemukan');
+                        showToast(data.message || 'Produk tidak ditemukan', 'error');
                     }
                 } catch (e) {
-                    alert('Gagal scan barcode');
+                    showToast('Gagal scan barcode', 'error');
                 }
             }
         };
     }
     </script>
-    
+
     <!-- Left Section - Products -->
     <div class="lg:col-span-2 space-y-6">
         <!-- Barcode Scanner & Search -->
@@ -138,36 +139,36 @@
                     <div class="flex space-x-2">
                         <div class="relative flex-1">
                             <i class="fas fa-barcode absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-500"></i>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 x-model="barcodeInput"
                                 @keyup.enter="scanBarcode()"
-                                placeholder="Scan atau ketik barcode..." 
+                                placeholder="Scan atau ketik barcode..."
                                 class="w-full bg-neutral-800 border border-neutral-700 rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:border-neutral-500 transition-colors">
                         </div>
-                        <button 
+                        <button
                             @click="scanBarcode()"
                             class="px-4 py-3 bg-white text-black rounded-lg font-semibold hover:bg-neutral-200 transition-colors">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Manual Search -->
                 <div>
                     <label class="block text-sm font-medium mb-2">Cari Produk</label>
                     <div class="relative">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-500"></i>
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             x-model="searchQuery"
-                            placeholder="Cari nama produk..." 
+                            placeholder="Cari nama produk..."
                             class="w-full bg-neutral-800 border border-neutral-700 rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:border-neutral-500 transition-colors">
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <!-- Product Categories (Quick Filter) -->
         <div class="flex space-x-2 overflow-x-auto pb-2">
             <button @click="selectedCategoryId = null" :class="selectedCategoryId===null ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-400'" class="px-4 py-2 rounded-lg font-medium whitespace-nowrap">Semua</button>
@@ -175,7 +176,7 @@
                 <button @click="selectedCategoryId = cat.id" :class="selectedCategoryId===cat.id ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-400'" class="px-4 py-2 rounded-lg font-medium whitespace-nowrap hover:bg-neutral-700 transition-colors" x-text="cat.name"></button>
             </template>
         </div>
-        
+
         <!-- Products Grid -->
         <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
             <template x-for="p in filteredProducts" :key="p.id">
@@ -190,30 +191,30 @@
             </template>
         </div>
     </div>
-    
+
     <!-- Right Section - Cart & Checkout -->
     <div class="lg:col-span-1 space-y-6">
         <!-- Member Selection -->
         <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
             <label class="block text-sm font-medium mb-2">Member (Opsional)</label>
             <div x-data="{ showMemberModal: false }">
-                <button 
+                <button
                     @click="showMemberModal = true"
                     class="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-left hover:bg-neutral-700 transition-colors">
                     <div class="flex items-center justify-between">
-                        <span x-text="selectedMember ? selectedMember.name : 'Pilih Member'" 
+                        <span x-text="selectedMember ? selectedMember.name : 'Pilih Member'"
                               :class="selectedMember ? 'text-white' : 'text-neutral-400'"></span>
                         <i class="fas fa-chevron-down"></i>
                     </div>
                 </button>
-                
+
                 <template x-if="selectedMember">
                     <div class="mt-2 p-3 bg-gradient-to-r from-yellow-500/10 to-transparent border border-yellow-500/30 rounded-lg">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-semibold" x-text="selectedMember.name"></p>
                                 <p class="text-xs text-neutral-400">
-                                    Tier: <span class="capitalize" x-text="selectedMember.tier"></span> - 
+                                    Tier: <span class="capitalize" x-text="selectedMember.tier"></span> -
                                     Diskon: <span x-text="selectedMember.tier === 'gold' ? '15%' : selectedMember.tier === 'silver' ? '10%' : '5%'"></span>
                                 </p>
                             </div>
@@ -223,7 +224,7 @@
                         </div>
                     </div>
                 </template>
-                
+
                 <!-- Member Selection Modal -->
                 <div x-show="showMemberModal"
                      x-transition
@@ -238,7 +239,7 @@
                             </button>
                         </div>
                         <div class="p-4">
-                            <input type="text" placeholder="Cari member..." 
+                            <input type="text" placeholder="Cari member..."
                                    class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-neutral-500">
                             <div class="space-y-2 max-h-96 overflow-y-auto">
                                 <template x-for="m in members" :key="m.id">
@@ -253,14 +254,14 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Cart -->
         <div class="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
             <div class="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
                 <h3 class="font-semibold">Keranjang</h3>
                 <span class="text-xs bg-neutral-800 px-2 py-1 rounded" x-text="cart.length + ' item'"></span>
             </div>
-            
+
             <div class="max-h-[400px] overflow-y-auto p-4">
                 <template x-if="cart.length === 0">
                     <div class="text-center py-12">
@@ -268,7 +269,7 @@
                         <p class="text-neutral-400 text-sm">Keranjang masih kosong</p>
                     </div>
                 </template>
-                
+
                 <div class="space-y-3">
                     <template x-for="(item, index) in cart" :key="index">
                         <div class="bg-neutral-800 rounded-lg p-3">
@@ -281,15 +282,15 @@
                                     <i class="fas fa-trash text-sm"></i>
                                 </button>
                             </div>
-                            
+
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center space-x-2 bg-neutral-900 rounded-lg">
-                                    <button @click="updateQuantity(index, -1)" 
+                                    <button @click="updateQuantity(index, -1)"
                                             class="w-8 h-8 flex items-center justify-center hover:bg-neutral-700 rounded-lg transition-colors">
                                         <i class="fas fa-minus text-xs"></i>
                                     </button>
                                     <span class="w-8 text-center font-semibold" x-text="item.quantity"></span>
-                                    <button @click="updateQuantity(index, 1)" 
+                                    <button @click="updateQuantity(index, 1)"
                                             class="w-8 h-8 flex items-center justify-center hover:bg-neutral-700 rounded-lg transition-colors">
                                         <i class="fas fa-plus text-xs"></i>
                                     </button>
@@ -301,7 +302,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Summary -->
         <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
             <div class="space-y-3 mb-4">
@@ -309,36 +310,36 @@
                     <span class="text-neutral-400">Subtotal</span>
                     <span class="font-semibold" x-text="'Rp ' + subtotal.toLocaleString('id-ID')">Rp 0</span>
                 </div>
-                
+
                 <template x-if="selectedMember">
                     <div class="flex items-center justify-between text-sm">
                         <span class="text-green-500">Diskon Member</span>
                         <span class="font-semibold text-green-500" x-text="'- Rp ' + discount.toLocaleString('id-ID')">Rp 0</span>
                     </div>
                 </template>
-                
+
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-neutral-400">Pajak (11%)</span>
                     <span class="font-semibold" x-text="'Rp ' + tax.toLocaleString('id-ID')">Rp 0</span>
                 </div>
-                
+
                 <div class="pt-3 border-t border-neutral-800 flex items-center justify-between">
                     <span class="font-semibold">Total</span>
                     <span class="text-2xl font-bold" x-text="'Rp ' + total.toLocaleString('id-ID')">Rp 0</span>
                 </div>
             </div>
-            
+
             <!-- Payment Method -->
             <div class="mb-4">
                 <label class="block text-sm font-medium mb-2">Metode Pembayaran</label>
                 <div class="grid grid-cols-2 gap-2">
-                    <button 
+                    <button
                         @click="paymentMethod = 'cash'"
                         :class="paymentMethod === 'cash' ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-400'"
                         class="px-4 py-3 rounded-lg font-medium transition-colors">
                         <i class="fas fa-money-bill-wave mr-2"></i>Cash
                     </button>
-                    <button 
+                    <button
                         @click="paymentMethod = 'transfer'"
                         :class="paymentMethod === 'transfer' ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-400'"
                         class="px-4 py-3 rounded-lg font-medium transition-colors">
@@ -346,12 +347,12 @@
                     </button>
                 </div>
             </div>
-            
+
             <!-- Cash Input -->
             <div x-show="paymentMethod === 'cash'" class="mb-4">
                 <label class="block text-sm font-medium mb-2">Uang Diterima</label>
-                <input 
-                    type="number" 
+                <input
+                    type="number"
                     x-model.number="cashReceived"
                     placeholder="0"
                     class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:border-neutral-500 transition-colors">
@@ -361,15 +362,15 @@
                     </p>
                 </template>
             </div>
-            
+
             <!-- Action Buttons -->
             <div class="flex space-x-2">
-                <button 
+                <button
                     @click="clearCart()"
                     class="flex-1 px-4 py-3 bg-neutral-800 text-white rounded-lg font-semibold hover:bg-neutral-700 transition-colors">
                     Clear
                 </button>
-                <button 
+                <button
                     @click="checkout()"
                     :disabled="cart.length === 0"
                     :class="cart.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-200'"

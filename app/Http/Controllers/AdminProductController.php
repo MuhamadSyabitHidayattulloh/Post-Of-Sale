@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AdminProductController extends Controller
 {
@@ -45,7 +46,14 @@ class AdminProductController extends Controller
             'barcode' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        $imageUrl = null;
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products', 'public');
+            $imageUrl = $path;
+        }
 
         $product = new Product();
         $product->name = $data['name'];
@@ -56,6 +64,7 @@ class AdminProductController extends Controller
         $product->barcode = $data['barcode'] ?? null;
         $product->description = $data['description'] ?? null;
         $product->is_active = (bool) ($data['is_active'] ?? false);
+        $product->image_url = $imageUrl;
         $product->sold_count = 0;
         $product->save();
 
@@ -74,7 +83,19 @@ class AdminProductController extends Controller
             'barcode' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($product->image_url) {
+                Storage::disk('public')->delete($product->image_url);
+            }
+
+            $path = $request->file('image')->store('products', 'public');
+            $product->image_url = $path;
+        }
 
         $product->fill([
             'name' => $data['name'],
@@ -94,6 +115,12 @@ class AdminProductController extends Controller
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
+
+        // Delete image if exists
+        if ($product->image_url) {
+            Storage::disk('public')->delete($product->image_url);
+        }
+
         $product->delete();
         return back()->with('status', 'Produk dihapus');
     }
